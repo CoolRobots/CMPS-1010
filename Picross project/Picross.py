@@ -64,7 +64,79 @@ def generate_clues(grid):
         col_clues.append(clues or [0])
 
     return row_clues, col_clues
+#------------------------------
+# AWESOME UNIQUE SOLUTION CHECK
+#------------------------------
+def generate_line_patterns(length, clues):
+    # Special case: checks for empty row/column, making puzzle impossible
+    if clues == [0]:
+        return [[0] * length]
 
+    results = []
+
+    def backtrack(pos, clue_index, current):
+        if clue_index == len(clues):
+            # Fill remaining cells with 0
+            results.append(current + [0] * (length - len(current)))
+            return
+
+        block = clues[clue_index]
+        # Earliest and latest start positions for this block
+        min_pos = pos
+        max_pos = length - sum(clues[clue_index:]) - (len(clues) - clue_index - 1)
+
+        for start in range(min_pos, max_pos + 1):
+            new_line = current + [0] * (start - len(current)) + [1] * block
+            if len(new_line) < length:
+                new_line.append(0)  # required separator unless last block
+            backtrack(start + block + 1, clue_index + 1, new_line)
+
+    backtrack(0, 0, [])
+    return results
+
+
+def solve_all(row_clues, col_clues, limit=2):
+    size = len(row_clues)
+
+    # Precompute all valid patterns for each row and column
+    row_patterns = [generate_line_patterns(size, rc) for rc in row_clues]
+    col_patterns = [generate_line_patterns(size, cc) for cc in col_clues]
+
+    # Grid starts empty (None = unknown)
+    grid = [[None] * size for _ in range(size)]
+    solutions = 0
+
+    # Check if the partial grid is still compatible with column patterns
+    def is_valid_partial(r):
+        for col in range(size):
+            col_vals = [grid[row][col] for row in range(r + 1)]
+            # A column is valid if at least one pattern matches the prefix
+            if not any(pattern[:r + 1] == col_vals for pattern in col_patterns[col]):
+                return False
+        return True
+
+    def backtrack_row(r):
+        nonlocal solutions
+        if solutions >= limit:
+            return
+
+        if r == size:
+            solutions += 1
+            return
+
+        for pattern in row_patterns[r]:
+            # Place pattern into row r
+            for c in range(size):
+                grid[r][c] = pattern[c]
+
+            if is_valid_partial(r):
+                backtrack_row(r + 1)
+
+            if solutions >= limit:
+                return
+
+    backtrack_row(0)
+    return solutions
 # -----------------------------
 # UI POLISH
 # -----------------------------
@@ -238,8 +310,12 @@ def home_screen(screen):
 def play_game(screen, GRID_SIZE):
     font = pygame.font.SysFont("Segoe UI", CLUE_FONT_SIZE)
 
-    SOLUTION = generate_random_grid(GRID_SIZE)
-    row_clues, col_clues = generate_clues(SOLUTION)
+    while True:
+        SOLUTION = generate_random_grid(GRID_SIZE)
+        row_clues, col_clues = generate_clues(SOLUTION)
+        num_solutions = solve_all(row_clues, col_clues, limit=2)
+        if num_solutions == 1:
+            break   
 
     max_row_clue_width = max(font.size(" ".join(map(str, clues)))[0] for clues in row_clues)
     max_col_clue_height = max(len(clues) * CLUE_FONT_SIZE for clues in col_clues)
