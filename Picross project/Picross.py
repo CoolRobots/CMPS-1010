@@ -380,6 +380,7 @@ def play_game(screen, GRID_SIZE):
         if check_win():
             print("You solved it!")
             pygame.time.wait(1500)
+            screen = pygame.display.set_mode((640, 720))
             return
 
         for event in pygame.event.get():
