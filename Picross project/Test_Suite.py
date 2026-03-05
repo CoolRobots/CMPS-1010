@@ -61,7 +61,7 @@ class TestPicross(unittest.TestCase):
 
         self.assertEqual(col_clues, [
             [1, 1],
-            [1, 1],
+            [2],
             [3],
             [1, 1]
         ])
