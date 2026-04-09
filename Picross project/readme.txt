@@ -2,6 +2,7 @@
 ------------------------------------------------------------
 PICROSS README
 ------------------------------------------------------------
+Game adapted/programmed by Jackson Bethune
 
 Overview
 This is an interactive Picross (Nonogram) puzzle game built in Python using the Pygame library. 
@@ -17,6 +18,8 @@ Features
 - Left click to fill a cell
 - Right click to place an X mark
 - Win detection when your filled grid matches the solution
+- A puzzle creator where you can draw your own puzzle, export it and check its solvability
+- A puzzle importer where you can import puzzles in the form of text
 - Unlimited fun
 
 Requirements
