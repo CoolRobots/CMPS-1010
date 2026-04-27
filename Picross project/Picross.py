@@ -99,25 +99,66 @@ def generate_line_patterns(length, clues):
 
     backtrack(0, 0, [])
     return results
+def prefix_matches_clues(prefix, clues):
+    """
+    Check if a partial column (prefix of 0/1/None) is still compatible
+    with the given clues.
+    """
+    blocks = []
+    count = 0
+
+    for v in prefix:
+        if v == 1:
+            count += 1
+        elif v == 0:
+            if count > 0:
+                blocks.append(count)
+                count = 0
+        else:
+            # None: unknown, stop here
+            break
+
+    # If we ended on a running block but haven't closed it yet,
+    # we don't append it to blocks; it's still in-progress.
+    in_progress = (count > 0)
+
+    # Now compare blocks with clues:
+
+    # If we already have more completed blocks than clues → impossible
+    if len(blocks) > len(clues):
+        return False
+
+    # All completed blocks must match the clue sizes so far
+    for i, b in enumerate(blocks):
+        if b != clues[i]:
+            return False
+
+    # If we have an in-progress block, it must not exceed the next clue
+    if in_progress:
+        if len(blocks) >= len(clues):
+            # No clue left to match this in-progress block
+            return False
+        if count > clues[len(blocks)]:
+            return False
+
+    return True
 
 
 def solve_all(row_clues, col_clues, limit=2):
     size = len(row_clues)
 
-    # Precompute all valid patterns for each row and column
+    # Precompute row patterns only
     row_patterns = [generate_line_patterns(size, rc) for rc in row_clues]
-    col_patterns = [generate_line_patterns(size, cc) for cc in col_clues]
 
     # Grid starts empty (None = unknown)
     grid = [[None] * size for _ in range(size)]
     solutions = 0
 
-    # Check if the partial grid is still compatible with column patterns
     def is_valid_partial(r):
+        # Check each column prefix against its clues
         for col in range(size):
-            col_vals = [grid[row][col] for row in range(r + 1)]
-            # A column is valid if at least one pattern matches the prefix
-            if not any(pattern[:r + 1] == col_vals for pattern in col_patterns[col]):
+            col_prefix = [grid[row][col] for row in range(r + 1)]
+            if not prefix_matches_clues(col_prefix, col_clues[col]):
                 return False
         return True
 
@@ -143,6 +184,7 @@ def solve_all(row_clues, col_clues, limit=2):
 
     backtrack_row(0)
     return solutions
+
 # -----------------------------
 # UI POLISH
 # -----------------------------
@@ -342,7 +384,8 @@ def play_game(screen, GRID_SIZE, SOLUTION=None):
     font = pygame.font.SysFont("Segoe UI", CLUE_FONT_SIZE)
 
     if SOLUTION is None:
-        SOLUTION = generate_random_grid(GRID_SIZE)
+        SOLUTION = generate_unique_solution_grid(GRID_SIZE)
+
     row_clues, col_clues = generate_clues(SOLUTION)
 
     max_row_clue_width = max(font.size(" ".join(map(str, clues)))[0] for clues in row_clues)
@@ -627,7 +670,7 @@ def custom_puzzle_screen(screen):
                     row_clues, col_clues = generate_clues(grid)
 
                     # Run solver
-                    solution_count = solve_all(row_clues, col_clues, limit=1000)
+                    solution_count = solve_all(row_clues, col_clues, limit=100)
 
 
                 # Export
@@ -801,6 +844,26 @@ def play_game_with_solution(screen, solution):
         return
     size = len(solution)
     play_game(screen, size, SOLUTION=solution)
+def generate_unique_solution_grid(size, max_attempts=500):
+    attempts = 0
+    while attempts < max_attempts:
+        attempts += 1
+
+        # Step 1: generate random grid
+        grid = generate_random_grid(size)
+
+        # Step 2: generate clues
+        row_clues, col_clues = generate_clues(grid)
+
+        # Step 3: check number of solutions
+        count = solve_all(row_clues, col_clues, limit=2)
+
+        # Step 4: accept only unique-solution puzzles
+        if count == 1:
+            return grid
+
+    # If we fail too many times, fall back to random grid
+    return generate_random_grid(size)
 
 def copied_screen(screen):
     screen = pygame.display.set_mode((640, 720))
