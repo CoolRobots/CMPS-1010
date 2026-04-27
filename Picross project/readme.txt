@@ -48,3 +48,4 @@ If you see the error "ModuleNotFoundError: No module named 'picross'", check if:
 - The test file is in the same folder
 - You are running the test from inside that folder
 
+Note: Make sure there's only 1 solution when exporting puzzles. Puzzles imported that have more than 1 solution won't work
